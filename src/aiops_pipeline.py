@@ -1,9 +1,9 @@
 import json
 
-from anomaly_detector import AnomalyDetector
-from event_consumer import EventConsumer
-from event_producer import EventProducer
-from event_topic import EventTopic
+from src.anomaly_detector import AnomalyDetector
+from src.event_consumer import EventConsumer
+from src.event_producer import EventProducer
+from src.event_topic import EventTopic
 
 
 def load_data(file_path):
