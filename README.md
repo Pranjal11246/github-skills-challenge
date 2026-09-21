@@ -264,6 +264,125 @@ Reasons: High response time, High CPU utilization, High memory utilization, Erro
 
 This output confirms the complete end-to-end flow: the service telemetry was processed, anomalies were detected, event objects were created and sent through the producer/topic/consumer path, and the final AIOps result correctly represented the operational issue affecting the payment service.
 
+## Task-7: Final Project Summary and Reproduction Guide
+
+### 1. AIOps scenario
+
+This repository models a payment-processing service called `payment-service`. The operational problem is that the service can slow down or fail under resource pressure, resulting in elevated latency, increased CPU and memory consumption, and timeout-related error log messages. The purpose of the AIOps workflow is to detect these signals early, correlate the relevant telemetry, emit anomaly events, and surface a likely operational incident for investigation.
+
+### 2. Operational data description
+
+The operational data is stored in `data/service_data.json` and contains a compact sequence of health records collected once per minute. Each record includes a timestamp, the service name, request latency in milliseconds, CPU and memory percentages, the log severity, and the message text describing the event. This data is sufficient to distinguish normal operation from degraded conditions.
+
+### 3. Observations from the logs and metrics
+
+The normal records show stable service behavior:
+
+- response times remain around 120-150 ms
+- CPU usage remains roughly 42-50%
+- memory usage remains roughly 51-57%
+- log records are `INFO` and report successful payment processing
+
+The unusual records are the samples around `2026-09-20T10:05:00` and `2026-09-20T10:06:00`:
+
+- response times rise to 610 ms and 640 ms
+- CPU reaches 75% and 94%
+- memory reaches 70% and 91%
+- logs switch to `ERROR`
+- messages indicate `Payment service timeout` and `Database connection timeout`
+
+These conditions clearly represent degraded service behavior.
+
+### 4. Anomaly-detection findings
+
+The `AnomalyDetector` flags records when response time, CPU utilization, or memory utilization exceeds the configured thresholds, and when an `ERROR` log event is present. In this dataset, the detector identifies two abnormal observations:
+
+- `2026-09-20T10:05:00` — `High response time`, `Error log detected`
+- `2026-09-20T10:06:00` — `High response time`, `High CPU utilization`, `High memory utilization`, `Error log detected`
+
+These anomalies correspond to the service degradation seen in the metrics and logs.
+
+### 5. Event-processing flow
+
+The event flow in the repository is:
+
+`Operational Data -> Anomaly Detection -> Event -> Producer -> Topic -> Consumer -> AIOps`
+
+The core components are:
+
+- `AnomalyDetector`: evaluates telemetry to decide whether an event is anomalous.
+- `EventProducer`: sends the generated anomaly event to the topic.
+- `EventTopic`: stores the in-memory event stream.
+- `EventConsumer`: reads from the topic and passes the message downstream.
+
+### 6. Final workflow execution result
+
+The corrected end-to-end workflow was executed with the command below:
+
+```bash
+cd /workspaces/github-skills-challenge
+python3 src/aiops_pipeline.py
+```
+
+Observed output:
+
+```text
+==================================================
+AIOps Pipeline Result
+==================================================
+Records processed: 10
+Anomalies detected: 2
+Events consumed: 2
+
+Detected Events:
+
+Service: payment-service
+Timestamp: 2026-09-20T10:05:00
+Type: ANOMALY
+Reasons: High response time, Error log detected
+
+Service: payment-service
+Timestamp: 2026-09-20T10:06:00
+Type: ANOMALY
+Reasons: High response time, High CPU utilization, High memory utilization, Error log detected
+```
+
+This demonstrates the full AIOps pipeline working end-to-end: the operational data was processed, abnormal behavior was detected, anomaly events were published to the topic, the consumer received them, and the final output reflected the service incident.
+
+### 7. Issues identified and corrected
+
+Two issues were discovered during workflow validation:
+
+1. Topic mismatch between producer and consumer
+   - The producer and consumer were not subscribed to the same topic.
+   - Corrected by ensuring the consumer reads from the same topic instance that the producer published to.
+
+2. Incorrect log severity logic
+   - The detector looked for `WARNING` instead of the actual failure-level `ERROR` messages present in the data.
+   - Corrected by checking for `ERROR`, which matches the real timeout events in the dataset.
+
+### 8. Limitation and possible improvement
+
+The current implementation is a simple threshold-based detector. It is clear and effective for this synthetic dataset, but it may miss more complex incidents or fail to correlate multiple related anomalies over time. A better approach would be to add time-window correlation and incident grouping so related spikes and error messages are treated as one service event instead of several isolated alerts.
+
+### 9. Reproduction steps
+
+Another user can reproduce the demonstration by following these steps:
+
+1. Open the repository root.
+2. Confirm the project contains the required files: `data/service_data.json`, `src/anomaly_detector.py`, `src/event_producer.py`, `src/event_topic.py`, `src/event_consumer.py`, and `src/aiops_pipeline.py`.
+3. Run the workflow from the project root:
+
+```bash
+cd /workspaces/github-skills-challenge
+python3 src/aiops_pipeline.py
+```
+
+4. Review the console output to confirm the service processed 10 records and detected 2 anomalies.
+5. If needed, validate the event stream directly by running the producer/topic/consumer sequence in the `src` directory with the repository’s operational data.
+
+This README documents the complete scenario, the data and findings, the event flow, the corrected issues, the final execution result, and the steps needed to reproduce the demonstration.
+
 ---
 
 &copy; 2025 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
