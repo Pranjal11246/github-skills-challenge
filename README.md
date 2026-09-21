@@ -214,6 +214,56 @@ Reasons: High response time, High CPU utilization, High memory utilization, Erro
 
 This confirms that the workflow now operates correctly within the existing architecture: telemetry is processed, anomaly events are published, the consumer receives the same event stream, and the downstream AIOps layer can act on the anomaly details.
 
+## Task-6: End-to-End Pipeline Execution
+
+After completing the investigation and corrections, the complete AIOps workflow was executed to confirm the full data path:
+
+`Operational Data -> Anomaly Detection -> Event -> Producer -> Topic -> Consumer -> AIOps`
+
+### Verification criteria
+
+The final workflow execution was checked against the following conditions:
+
+1. Operational data is processed.
+2. Anomalous behaviour is detected.
+3. An anomaly event is generated.
+4. The event is published.
+5. The event is consumed.
+6. The event is processed successfully.
+7. The final output represents the detected operational issue.
+
+### Execution command
+
+```bash
+cd /workspaces/github-skills-challenge
+python3 src/aiops_pipeline.py
+```
+
+### Observed output
+
+```text
+==================================================
+AIOps Pipeline Result
+==================================================
+Records processed: 10
+Anomalies detected: 2
+Events consumed: 2
+
+Detected Events:
+
+Service: payment-service
+Timestamp: 2026-09-20T10:05:00
+Type: ANOMALY
+Reasons: High response time, Error log detected
+
+Service: payment-service
+Timestamp: 2026-09-20T10:06:00
+Type: ANOMALY
+Reasons: High response time, High CPU utilization, High memory utilization, Error log detected
+```
+
+This output confirms the complete end-to-end flow: the service telemetry was processed, anomalies were detected, event objects were created and sent through the producer/topic/consumer path, and the final AIOps result correctly represented the operational issue affecting the payment service.
+
 ---
 
 &copy; 2025 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
