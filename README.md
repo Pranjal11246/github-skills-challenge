@@ -71,6 +71,59 @@ Together, these signals suggest an incident or resource saturation event where t
 
 In summary, the repository’s telemetry shows a short-lived degradation event superimposed on a mostly healthy service baseline. That pattern is exactly the kind of signal the AIOps workflow in this assessment is designed to detect and escalate.
 
+
+
+## Task-3: Validation of Anomaly Detection and Event Streaming
+
+The repository’s provided detector was applied to the operational data in `data/service_data.json` to validate that the AIOps workflow can identify abnormal service behavior and produce a readable detection report.
+
+### Validation results
+
+The detector processed all 10 records in the dataset and flagged 2 observations as anomalies. The flagged records are:
+
+- `2026-09-20T10:05:00`
+  - `response_time_ms`: 610
+  - `cpu_percent`: 75
+  - `memory_percent`: 70
+  - `log_level`: `ERROR`
+  - `message`: "Payment service timeout"
+  - Reasons returned: `High response time`
+
+- `2026-09-20T10:06:00`
+  - `response_time_ms`: 640
+  - `cpu_percent`: 94
+  - `memory_percent`: 91
+  - `log_level`: `ERROR`
+  - `message`: "Database connection timeout"
+  - Reasons returned: `High response time`, `High CPU utilization`, `High memory utilization`
+
+These anomalies clearly match the operational pattern described in the data: a short-lived service degradation with elevated latency and resource pressure, accompanied by failure-level logs.
+
+### Difference between normal and anomalous observations
+
+The remaining observations are normal. They have response times near 120–150 ms, CPU around 42–50%, memory around 51–57%, and `INFO` log entries indicating successful payment processing. The detector does not flag those records, which is consistent with the expected baseline behavior.Only those anamolies are flagged which surpass a certain threshold value for any resource or give out some kind of errors.    
+
+### Anamoly Identification Result
+
+- Expected anomaly missed: no clear expected anomaly was missed in the provided data; the timeout records were correctly identified.
+- False positive on normal behavior: none were observed in this dataset.
+
+### Relevant log and metric details
+
+The anomaly report is readable and explains why each record was flagged. The important signals are the combination of:
+
+- very high latency (`response_time_ms` well above the normal range),
+- elevated CPU and memory usage,
+- and an `ERROR` log message indicating a timeout condition.
+
+This is sufficient for understanding why the observation was considered abnormal.
+
+### Limitation and possible improvement
+
+A limitation of the current detection approach is that it relies on fixed metric thresholds and only explicitly checks for `WARNING` log severity in the detector logic. In practice, the repository data contains `ERROR` logs that are more relevant to the incident, so a possible improvement would be to include explicit error-log correlation and time-windowed incident grouping to better combine metrics and logs into a single operational signal.
+
+This matches the assessment goal: the AIOps workflow is intended to identify operational degradation by correlating abnormal metrics and concerning log events into a detectable incident.
+
 ---
 
 &copy; 2025 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
