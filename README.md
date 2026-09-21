@@ -139,7 +139,7 @@ The orchestration layer is `src/aiops_pipeline.py`, which coordinates the detect
 
 ### Execution result
 
-I validated the actual event flow using the repository’s provided components in the expected runtime context (`src` directory), and the result was:
+The repository’s event-streaming simulation was executed using the provided producer, topic, and consumer components. The verification result was:
 
 - `records_processed= 10`
 - `anomalies_detected= 2`
@@ -154,13 +154,65 @@ The two emitted anomaly events were:
 These results show that:
 
 1. An anomaly identified by the detector produces an event.
-2. That event is passed to the producer.
-3. The producer publishes it to the topic.
-4. The consumer reads it from the same topic.
-5. The event is processed and returned to the downstream logic.
-6. The downstream AIOps pipeline therefore receives a usable anomaly event for further reporting or action.
+2. The event is passed to the producer.
+3. The producer publishes the event to the appropriate topic.
+4. The consumer receives the event from the topic.
+5. The consumer processes the received event.
+6. The processed event reaches the downstream AIOps component.
 
-This confirms that the event-processing path works as designed within the repository’s lightweight simulation.
+This confirms that an anomaly can travel through the complete event-processing pipeline in the repository’s lightweight simulation.
+
+## Task-5: Workflow Investigation and Corrections
+
+The assessment environment contains a small number of workflow issues that prevent the complete AIOps process from operating correctly unless they are corrected in place.
+
+### Issue 1: Topic mismatch between producer and consumer
+
+- Component affected: the event flow in `src/aiops_pipeline.py`
+- Cause: the producer published to `service-events`, while the consumer was reading from a different topic (`anomaly-events`)
+- Correction: the consumer must read from the same topic object created for the producer
+- Verification: after correcting the topic assignment, the workflow produced `Events consumed: 2`, confirming that the anomaly events reached downstream processing
+
+### Issue 2: Incorrect log severity check in anomaly detection
+
+- Component affected: `src/anomaly_detector.py`
+- Cause: the detector was checking for `WARNING` instead of the actual failure-state `ERROR` values present in the repository data
+- Correction: the detector now treats `ERROR` log events as relevant anomaly signals in the same existing architecture
+- Verification: the timeout events were correctly identified with an error log reason attached
+
+### Result after correction
+
+The corrected workflow was executed with:
+
+```bash
+cd /workspaces/github-skills-challenge
+python3 src/aiops_pipeline.py
+```
+
+Observed output:
+
+```text
+==================================================
+AIOps Pipeline Result
+==================================================
+Records processed: 10
+Anomalies detected: 2
+Events consumed: 2
+
+Detected Events:
+
+Service: payment-service
+Timestamp: 2026-09-20T10:05:00
+Type: ANOMALY
+Reasons: High response time, Error log detected
+
+Service: payment-service
+Timestamp: 2026-09-20T10:06:00
+Type: ANOMALY
+Reasons: High response time, High CPU utilization, High memory utilization, Error log detected
+```
+
+This confirms that the workflow now operates correctly within the existing architecture: telemetry is processed, anomaly events are published, the consumer receives the same event stream, and the downstream AIOps layer can act on the anomaly details.
 
 ---
 
