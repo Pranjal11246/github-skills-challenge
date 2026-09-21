@@ -124,6 +124,44 @@ A limitation of the current detection approach is that it relies on fixed metric
 
 This matches the assessment goal: the AIOps workflow is intended to identify operational degradation by correlating abnormal metrics and concerning log events into a detectable incident.
 
+## Task-4: Validation of the AIOps Event Flow
+
+The repository contains a lightweight event-streaming simulation made up of a producer, a topic, and a consumer. The purpose of the flow is to carry anomaly information from the detection step into downstream processing and reporting.
+
+### Components and their roles
+
+- `EventProducer`: takes a detected anomaly event and pushes it to the in-memory topic.
+- `EventTopic`: is the buffer or message bus that stores the published events.
+- `EventConsumer`: reads the events from the topic and delivers them for downstream use.
+- `Event/message`: the structured anomaly record containing the timestamp, service, event type, reasons, and the original source telemetry.
+
+The orchestration layer is `src/aiops_pipeline.py`, which coordinates the detection step and event publication/consumption process.
+
+### Execution result
+
+I validated the actual event flow using the repository’s provided components in the expected runtime context (`src` directory), and the result was:
+
+- `records_processed= 10`
+- `anomalies_detected= 2`
+- `events_published= 2`
+- `events_received= 2`
+
+The two emitted anomaly events were:
+
+1. `2026-09-20T10:05:00` - `ANOMALY` for `payment-service` with reason: `High response time`
+2. `2026-09-20T10:06:00` - `ANOMALY` for `payment-service` with reasons: `High response time`, `High CPU utilization`, `High memory utilization`
+
+These results show that:
+
+1. An anomaly identified by the detector produces an event.
+2. That event is passed to the producer.
+3. The producer publishes it to the topic.
+4. The consumer reads it from the same topic.
+5. The event is processed and returned to the downstream logic.
+6. The downstream AIOps pipeline therefore receives a usable anomaly event for further reporting or action.
+
+This confirms that the event-processing path works as designed within the repository’s lightweight simulation.
+
 ---
 
 &copy; 2025 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
